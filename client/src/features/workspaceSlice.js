@@ -3,9 +3,9 @@ import api from "../configs/api.js";
 
 export const fetcWorkspaces = createAsyncThunk(
     "workspace/fetchWorkspaces",
-    async({getToken})=>{
+    async ({ getToken }) => {
         try {
-            const {data} = await api.get("/api/workspaces", {headers: {Authorization: `Bearer ${await getToken()}`}});
+            const { data } = await api.get("/api/workspaces", { headers: { Authorization: `Bearer ${await getToken()}` } });
             return data.workspaces || []
         } catch (error) {
             console.log(error?.response?.data?.message || error.message);
@@ -117,28 +117,28 @@ const workspaceSlice = createSlice({
         }
 
     },
-    extraReducers: (builder)=>{
-        builder.addCase(fetcWorkspaces.pending, (state)=>{
+    extraReducers: (builder) => {
+        builder.addCase(fetcWorkspaces.pending, (state) => {
             state.loading = true
         })
-        builder.addCase(fetcWorkspaces.fulfilled, (state, action)=>{
+        builder.addCase(fetcWorkspaces.fulfilled, (state, action) => {
             state.workspaces = action.payload;
-            if(action.payload.length > 0){
+            if (action.payload.length > 0) {
                 const localStorageCurrentWorkspaceId = localStorage.getItem("currentWorkspaceId");
-                if(localStorageCurrentWorkspaceId){
-                    const findWorkspace = action.payload.find((w)=> w.id === localStorageCurrentWorkspaceId);
-                    if(findWorkspace){
+                if (localStorageCurrentWorkspaceId) {
+                    const findWorkspace = action.payload.find((w) => w.id === localStorageCurrentWorkspaceId);
+                    if (findWorkspace) {
                         state.currentWorkspace = findWorkspace
-                    }else{
+                    } else {
                         state.currentWorkspace = action.payload[0];
                     }
-                }else{
+                } else {
                     state.currentWorkspace = action.payload[0];
                 }
             }
             state.loading = false
         })
-        builder.addCase(fetcWorkspaces.rejected, (state)=>{
+        builder.addCase(fetcWorkspaces.rejected, (state) => {
             state.loading = false
         })
     }

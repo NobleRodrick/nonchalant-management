@@ -32,6 +32,27 @@ const Layout = () => {
     }
   }, [user, isLoaded]);
 
+  // Poll for workspaces a few times after org creation to handle event propagation or eventual consistency
+  useEffect(() => {
+    let intervalId;
+    let attempts = 0;
+    const maxAttempts = 6; // ~12 seconds
+
+    if (user && isLoaded && workspaces.length === 0) {
+      intervalId = setInterval(() => {
+        attempts += 1;
+        dispatch(fetcWorkspaces({ getToken }));
+        if (attempts >= maxAttempts) {
+          clearInterval(intervalId);
+        }
+      }, 2000);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [user, isLoaded, workspaces.length, dispatch, getToken]);
+
   if (!user) {
     return (
       <div className="flex justify-center items-center h-screen bg-white dark:bg-zinc-950">
