@@ -4,8 +4,6 @@ import prisma from "../configs/prisma.js"
 // Get all workspaces for user
 export const getUserWorkspaces = async (req, res) => {
     try {
-        // prevent caching of user-specific workspace lists so clients always receive fresh data
-        res.setHeader('Cache-Control', 'no-store');
         const { userId } = await req.auth()
         const workspaces = await prisma.workspace.findMany({
             where: {

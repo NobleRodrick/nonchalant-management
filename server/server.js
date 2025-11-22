@@ -16,12 +16,16 @@ app.use(express.json())
 app.use(cors())
 app.use(clerkMiddleware())
 
-// Disable caching for all API routes to avoid edge/CDN returning 304 Not Modified
-// This ensures user-specific endpoints (like /api/workspaces) always return fresh JSON
+// Ensure API responses are not cached by edge/browser to avoid serving stale data (304)
 app.use('/api', (req, res, next) => {
-	res.setHeader('Cache-Control', 'no-store');
-	next();
+	res.setHeader('Cache-Control', 'no-store')
+	res.setHeader('Pragma', 'no-cache')
+	res.setHeader('Surrogate-Control', 'no-store')
+	// lightweight request log for debugging
+	console.log(`[api-middleware] ${req.method} ${req.originalUrl}`)
+	next()
 })
+
 
 app.get("/", (req, res) => res.send('Server is live!'))
 

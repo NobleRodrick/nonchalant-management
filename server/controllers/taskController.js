@@ -6,7 +6,9 @@ import { inngest } from "../inngest/index.js"
 export const createTask = async (req, res) => {
     try {
         const {userId} = await req.auth()
-        const {projectId, title, description, type, status, priority, assigneeId, due_date} = req.body
+        // frontend may send a wrapped payload: { formData, workspaceId, projectId }
+        const payload = req.body.formData ? { ...req.body.formData, projectId: req.body.projectId } : req.body
+        const {projectId, title, description, type, status, priority, assigneeId, due_date} = payload
         const origin = req.get('origin')
 
         // Check if user has admin role for project
@@ -62,7 +64,7 @@ export const updateTask = async (req, res) => {
     try {
 
         const task = await prisma.task.findUnique({
-            where: req.params.id
+            where: { id: req.params.id }
         })
 
         if(!task){

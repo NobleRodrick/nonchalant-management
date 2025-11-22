@@ -11,12 +11,19 @@ const syncUserCreation = inngest.createFunction(
     { event: 'clerk/user.created' },
     async ({ event }) => {
         const { data } = event
-        await prisma.user.create({
-            data: data.id,
-            email: data?.email_addresses[0]?.email_address,
-            name: data?.first_name + " " + data?.last_name,
-            image: data?.image_url,
-        })
+        try {
+            await prisma.user.create({
+                data: {
+                    id: data.id,
+                    email: data?.email_addresses?.[0]?.email_address || "",
+                    name: `${data?.first_name || ""} ${data?.last_name || ""}`.trim(),
+                    image: data?.image_url || "",
+                }
+            })
+        } catch (err) {
+            console.error('syncUserCreation error:', err)
+            throw err
+        }
     }
 )
 
@@ -59,24 +66,34 @@ const syncWorkspaceCreation = inngest.createFunction(
     { event: 'clerk/organization.created' },
     async ({ event }) => {
         const { data } = event
-        await prisma.workspace.create({
-            data: {
-                id: data.id,
-                name: data.name,
-                slug: data.slug,
-                ownerId: data.created_by,
-                image_url: data.image_url,
-            }
-        })
+        try {
+            await prisma.workspace.create({
+                data: {
+                    id: data.id,
+                    name: data.name,
+                    slug: data.slug,
+                    ownerId: data.created_by,
+                    image_url: data.image_url,
+                }
+            })
 
-        // add creator as admin member 
-        await prisma.workspaceMember.create({
-            data: {
-                userId: data.created_by,
-                workspaceId: data.id,
-                role: 'ADMIN'
+            // add creator as admin member (only if user exists)
+            try {
+                await prisma.workspaceMember.create({
+                    data: {
+                        userId: data.created_by,
+                        workspaceId: data.id,
+                        role: 'ADMIN'
+                    }
+                })
+            } catch (memberErr) {
+                // log and continue; user record might not yet exist — Inngest will receive user.created event separately
+                console.error('syncWorkspaceCreation - workspaceMember.create error:', memberErr)
             }
-        })
+        } catch (err) {
+            console.error('syncWorkspaceCreation error:', err)
+            throw err
+        }
     }
 )
 
