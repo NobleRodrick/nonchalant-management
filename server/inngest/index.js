@@ -79,6 +79,14 @@ const syncWorkspaceCreation = inngest.createFunction(
 
             // add creator as admin member (only if user exists)
             try {
+                // Ensure a user record exists (create a minimal placeholder if necessary).
+                // This avoids foreign-key failures if Clerk's user.created event arrives slightly later.
+                await prisma.user.upsert({
+                    where: { id: data.created_by },
+                    update: {},
+                    create: { id: data.created_by, email: "", name: "", image: "" }
+                })
+
                 await prisma.workspaceMember.create({
                     data: {
                         userId: data.created_by,
@@ -87,7 +95,7 @@ const syncWorkspaceCreation = inngest.createFunction(
                     }
                 })
             } catch (memberErr) {
-                // log and continue; user record might not yet exist — Inngest will receive user.created event separately
+                // log and continue; upsert/create may still fail in rare cases
                 console.error('syncWorkspaceCreation - workspaceMember.create error:', memberErr)
             }
         } catch (err) {
@@ -136,13 +144,24 @@ const syncWorkspaceMemberCreation = inngest.createFunction(
     { event: 'clerk/organizationInvitation.accepted' },
     async ({ event }) => {
         const { data } = event
-        await prisma.workspaceMember.create({
-            data: {
-                userId: data.user_id,
-                workspaceId: data.organization_id,
-                role: String(data.role_name).toUpperCase(),
-            }
-        })
+        try {
+            // ensure user exists
+            await prisma.user.upsert({
+                where: { id: data.user_id },
+                update: {},
+                create: { id: data.user_id, email: "", name: "", image: "" }
+            })
+
+            await prisma.workspaceMember.create({
+                data: {
+                    userId: data.user_id,
+                    workspaceId: data.organization_id,
+                    role: String(data.role_name).toUpperCase(),
+                }
+            })
+        } catch (err) {
+            console.error('syncWorkspaceMemberCreation error:', err)
+        }
     }
 )
 

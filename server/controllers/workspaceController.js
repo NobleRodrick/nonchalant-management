@@ -14,7 +14,10 @@ export const getUserWorkspaces = async (req, res) => {
 
         const workspaces = await prisma.workspace.findMany({
             where: {
-                members: { some: { userId: userId } }
+                OR: [
+                    { ownerId: userId },
+                    { members: { some: { userId: userId } } }
+                ]
             },
             include: {
                 members: { include: { user: true } },
